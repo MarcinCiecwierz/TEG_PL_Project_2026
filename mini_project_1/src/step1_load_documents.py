@@ -51,5 +51,32 @@ from helpers.config import Config
 
 
 def load_documents(config: Config) -> list[Document]:
-    # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: load_documents")
+    corpus_dir = config.path("paths.corpus_dir")
+    catalog_dir = config.path("paths.corpus_catalog")
+    required_fields = config.get("corpus.required_metadata")
+
+    loader = DirectoryLoader(str(corpus_dir), glob="*.md", loader_cls=TextLoader,
+                             loader_kwargs={"encoding": "utf-8"})
+
+    docs = loader.load()
+
+    catalog = load_catalog(catalog_dir)
+
+    for doc in docs:
+        file_name = Path(doc.metadata["source"]).name
+        file_from_catalog = catalog.get(file_name)
+
+        if file_from_catalog is None:
+            raise ValueError(f"{file_name}")
+
+        metadata = {}
+        for field in required_fields:
+            val = (file_from_catalog.get(field) or "").strip()
+            if val == "":
+                raise ValueError(f"{file_name} {field} empty")
+            metadata[field] = file_from_catalog[field]
+        metadata["source"] = file_name
+
+        doc.metadata = metadata
+
+    return sorted(docs, key=lambda d: d.metadata["doc_id"])
