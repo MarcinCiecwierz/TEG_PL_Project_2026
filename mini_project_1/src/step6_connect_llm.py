@@ -60,9 +60,48 @@ from helpers.config import Config, ConfigError, MissingConfigError
 
 def build_llm(config: Config) -> BaseChatModel:
     # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: build_llm")
+    provider = config.get("llm.provider")
+    model_name = config.get("llm.model")
+    temp = config.get("llm.temperature")
+    base_urls = config.get("llm.base_urls")
+    key_envs = config.get("llm.api_key_env")
+
+    providers = ["openai", "openrouter", "ollama"]
+
+    if provider not in providers:
+        raise ConfigError(provider, providers)
+
+    kwargs = {"temperature": temp}
+
+    if provider in ("openai", "openrouter"):
+        env_name = key_envs[provider]
+        api_key = os.environ.get(env_name)
+        if not api_key:
+            raise MissingConfigError(env_name)
+        kwargs["api_key"] = api_key
+
+    if provider in ("openrouter", "ollama"):
+        kwargs["base_url"] = base_urls[provider]
+
+    model_provider = "openai" if provider == "openrouter" else provider
+
+    llm = init_chat_model(
+        model_name,
+        model_provider=model_provider,
+        **kwargs
+    )
+    return llm
 
 
 def measure_call(llm: BaseChatModel, prompt: str) -> dict:
     # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: measure_call")
+    reply = llm.invoke(prompt)
+    usage = reply.usage_metadata
+    if not usage or "input_tokens" not in usage or "output_tokens" not in usage:
+        raise ValueError
+  
+    return {
+        "answer": reply.content,
+        "input_tokens": reply.usage_metadata["input_tokens"],
+        "output_tokens": reply.usage_metadata["output_tokens"],
+    }

@@ -43,14 +43,31 @@ from langchain_core.vectorstores import InMemoryVectorStore
 
 def build_vector_store(chunks: list[Document], embeddings: Embeddings) -> InMemoryVectorStore:
     # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: build_vector_store")
+    vs = InMemoryVectorStore(embedding=embeddings)
+    vs.add_documents(chunks, [c.metadata["chunk_id"] for c in chunks])
+    return vs
 
 
 def search(store: InMemoryVectorStore, question: str, k: int, doc_type: str | None = None) -> list[tuple[Document, float]]:
     # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: search")
-
+    vs = store
+    if doc_type:
+        return vs.similarity_search_with_score(question, k, filter=lambda d: d.metadata["doc_type"] == doc_type)
+    
+    return vs.similarity_search_with_score(question, k)
+    
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: cosine_similarity")
+
+    # cosine_similarity(a, b) = dot(a, b) / (|a| * |b|) jako float Pythona. Musi
+    #  dawać tę samą liczbę co wynik zwracany przez vector store. Wektor o długości zero -> ValueError.
+
+    u, v = np.array(a), np.array(b)
+    abs_u = np.linalg.norm(u)
+    abs_v = np.linalg.norm(v)
+    if abs_u == 0 or abs_v == 0:
+        raise ValueError
+    result = np.dot(u, v) / (abs_u * abs_v)
+    return result
+    
