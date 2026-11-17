@@ -48,4 +48,16 @@ from helpers.config import Config
 
 def build_embeddings(config: Config, underlying: Embeddings | None = None) -> Embeddings:
     # TODO: twój kod – zobacz CEL, WYNIK i WYMAGANIA na początku pliku
-    raise NotImplementedError("TODO: build_embeddings")
+    model_name = config.get("embeddings.model")
+    cache = config.path("paths.embedding_cache")
+
+    cached = CacheBackedEmbeddings.from_bytes_store(
+        underlying_embeddings=underlying,
+        document_embedding_cache=LocalFileStore(cache),
+        namespace=model_name,
+        batch_size=None,
+        query_embedding_cache=LocalFileStore(cache),
+        key_encoder="sha256"
+    )
+
+    return cached
